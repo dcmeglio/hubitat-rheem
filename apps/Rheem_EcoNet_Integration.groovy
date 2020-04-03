@@ -45,20 +45,20 @@ def prefListDevice() {
 	if (login()) {
 		def waterHeaterList = getDevices()
 		if (waterHeaterList) {
-			return dynamicPage(name: "prefListDevice",  title: "Devices", install:true, uninstall:true) {
+			return dynamicPage(name: "prefListDevice", title: "Devices", install:true, uninstall:true) {
 				section("Select which water heaters to monitor"){
 					input name: "waterHeaters", type: "enum", required: false, multiple: true, options: waterHeaterList
 				}
 			}
 		} else {
-			return dynamicPage(name: "prefListDevice",  title: "Error", install:false, uninstall:true) {
+			return dynamicPage(name: "prefListDevice", title: "Error", install:false, uninstall:true) {
 				section("") { 
 					paragraph "No water heaters were found"
 				}
 			}
 		}
 	} else {
-		return dynamicPage(name: "prefListDevice",  title: "Error", install:false, uninstall:true) {
+		return dynamicPage(name: "prefListDevice", title: "Error", install:false, uninstall:true) {
 			section("") { 
 				paragraph "The username and password you entered is incorrect."
 			}

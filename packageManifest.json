@@ -1,0 +1,25 @@
+{
+	"packageName": "Rheem EcoNet Integration",
+	"minimumHEVersion": "2.1.9",
+	"author": "Dominick Meglio",
+	"version": "1.0",
+	"dateReleased": "2020-04-08",
+	"apps" : [
+		{
+			"id" : "b118bb1e-8b68-4058-8566-435d69ca0ea9",
+			"name": "Rheem EcoNet Integration",
+			"namespace": "dcm.rheem",
+			"location": "https://raw.githubusercontent.com/dcmeglio/hubitat-rheem/master/apps/Rheem_EcoNet_Integration.groovy",
+			"required": true
+		}
+	]
+	"drivers": [
+		{
+			"id" : "5996b403-46c1-4352-b5d0-b487066fbc6f",
+			"name": "Rheem Econet Water Heater",
+			"namespace": "dcm.rheem",
+			"location": "https://raw.githubusercontent.com/dcmeglio/hubitat-rheem/master/drivers/Rheem_EcoNet_Water_Heater.groovy",
+			"required": true
+		}
+	]
+}

@@ -4,7 +4,7 @@
 	"author": "Dominick Meglio",
 	"version": "1.1.0",
 	"dateReleased": "2020-04-15",
-	"releaseNotes": "Added supportedThermostatModes and supportedThermostatFanModes support."
+	"releaseNotes": "Added supportedThermostatModes and supportedThermostatFanModes support.",
 	"documentationLink": "https://github.com/dcmeglio/hubitat-rheem/blob/master/README.md",
 	"apps" : [
 		{

@@ -5,6 +5,16 @@ Rheem EcoNet Water Heater Integration for Hubitat. This allows you to retrieve d
 You must install the device driver for the water heater for this to work.
 * Rheem EcoNet Water Heater
 
+### Thermostat Modes
+A Rheem water heater supports different modes than those available through Hubitat. This driver matches the device's modes to those supported by Hubitat. Additionally, the modes vary by the type of water heater you have (hybrid, electric, gas, etc.):
+
+|           Device         |              Hubitat           |
+|:------------------------:|:------------------------------:|
+| Off                      | off                            |
+| Heat Pump, Electric, Gas | heat                           |
+| High Demand, Performance | emergency heat                 |
+| Energy Saver             | auto                           |
+
 ## Apps
 The Rheem EcoNet Integration app is what actually communicates with the Rheem EcoNet system. 
 
@@ -13,3 +23,6 @@ To connect to the API you will need to specify your Rheem EcoNet username and pa
 
 ## Donations
 If you find this app useful, please consider making a [donation](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7LBRPJRLJSDDN&source=url)! 
+
+## Revision History
+* 2020.04.15 - Added calls to supportedThermostatModes and supportedThermostatFanModes. Thanks to Brian Spranger for the suggestion

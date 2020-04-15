@@ -14,6 +14,7 @@ metadata {
 		capability "Actuator"
 		capability "Refresh"
 		capability "Sensor"
+		capability "Configuration"
 		capability "ThermostatHeatingSetpoint"
         capability "TemperatureMeasurement"
 		capability "ThermostatSetpoint"
@@ -26,7 +27,22 @@ metadata {
     }
 }
 
+def installed() {
+	initialize()
+}
 
+def updated() {
+	initialize()
+}
+
+def initialize() {
+	sendEvent(name: "supportedThermostatModes", value: ["off", "heat", "emergency heat", "auto"])
+	sendEvent(name: "supportedThermostatFanModes", value: [])
+}
+
+def configure() {
+	initialize()
+}
 
 def refresh() {
 	parent.handleRefresh(device, device.deviceNetworkId.split(":")[1])

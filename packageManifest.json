@@ -2,8 +2,9 @@
 	"packageName": "Rheem EcoNet Integration",
 	"minimumHEVersion": "2.1.9",
 	"author": "Dominick Meglio",
-	"version": "1.0",
+	"version": "1.1.0",
 	"dateReleased": "2020-04-08",
+	"documentationLink": "https://github.com/dcmeglio/hubitat-rheem/blob/master/README.md",
 	"apps" : [
 		{
 			"id" : "b118bb1e-8b68-4058-8566-435d69ca0ea9",

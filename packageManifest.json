@@ -2,9 +2,9 @@
 	"packageName": "Rheem EcoNet Integration",
 	"minimumHEVersion": "2.1.9",
 	"author": "Dominick Meglio",
-	"version": "1.1.0",
-	"dateReleased": "2020-04-15",
-	"releaseNotes": "Added supportedThermostatModes and supportedThermostatFanModes support.",
+	"version": "1.1.1",
+	"dateReleased": "2020-04-20",
+	"releaseNotes": "Fixed a bug that prevented oauth refresh tokens from working.",
 	"documentationLink": "https://github.com/dcmeglio/hubitat-rheem/blob/master/README.md",
 	"apps" : [
 		{

@@ -297,7 +297,7 @@ def login() {
 				"grant_type": "refresh"
 			]
 			httpPost(params) { resp -> 
-            	if (response.status == 200) {
+            	if (resp.status == 200) {
 					state.access_token = resp.data.access_token
 					state.refresh_token = resp.data.refresh_token
 					state.expiration = now()+(resp.data.expires_in*1000)

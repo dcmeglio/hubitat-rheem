@@ -21,6 +21,9 @@ metadata {
 		capability "ThermostatOperatingState"
 		capability "ThermostatMode"
 		
+		command "setWaterHeaterMode", [[name:"Mode*","type":"ENUM","description":"Mode","constraints":["Heat Pump", "Energy Saver", "High Demand", "Normal", "Off"]]]
+		
+		attribute "waterHeaterMode", "ENUM"
 		attribute "upperTemp", "STRING"
 		attribute "lowerTemp", "STRING"
 		attribute "ambientTemp", "STRING"
@@ -66,6 +69,10 @@ def setHeatingSetpoint(temperature) {
 
 def setThermostatMode(thermostatmode) {
 	parent.handlesetThermostatMode(device, device.deviceNetworkId.split(":")[1],thermostatmode)
+}
+
+def setWaterHeaterMode(waterheatermode) {
+	parent.handlesetWaterHeatertMode(device, device.deviceNetworkId.split(":")[1],waterheatermode)
 }
 
 def auto() {

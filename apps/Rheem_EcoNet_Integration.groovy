@@ -38,6 +38,7 @@ def prefAccountAccess() {
 		section("Settings"){
 			input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
 		}
+		displayFooter()
 	}
 }
 
@@ -49,12 +50,14 @@ def prefListDevice() {
 				section("Select which water heaters to monitor"){
 					input name: "waterHeaters", type: "enum", required: false, multiple: true, options: waterHeaterList
 				}
+				displayFooter()
 			}
 		} else {
 			return dynamicPage(name: "prefListDevice", title: "Error", install:false, uninstall:true) {
 				section("") { 
 					paragraph "No water heaters were found"
 				}
+				displayFooter()
 			}
 		}
 	} else {
@@ -62,6 +65,7 @@ def prefListDevice() {
 			section("") { 
 				paragraph "The username and password you entered is incorrect."
 			}
+			displayFooter()
 		}  
 	}
 }
@@ -172,6 +176,7 @@ def handleRefresh(device, id) {
 		device.sendEvent(name: "upperTemp", value: data.upperTemp.toInteger(), unit: "F")
 		device.sendEvent(name: "lowerTemp", value: data.lowerTemp.toInteger(), unit: "F")
 		device.sendEvent(name: "ambientTemp", value: data.ambientTemp.toInteger(), unit: "F")
+		device.sendEvent(name: "waterHeaterMode", value: data.mode)
 		device.updateDataValue("minTemp", data.minSetPoint.toString())
 		device.updateDataValue("maxTemp", data.maxSetPoint.toString())
 	}
@@ -225,6 +230,30 @@ def handlesetThermostatMode(device, id, thermostatmode) {
 	}
 	
 	apiPutWithRetry("/equipment/${id}/modes", [mode: waterHeaterMode])
+}
+
+def handlesetWaterHeatertMode(device, id, waterheatermode) {
+	def mode = waterheatermode
+	if (waterheatermode == "Heat Pump") {
+		if (!hasMode(id, "Heat Pump"))
+			mode = "Heat Pump Only"
+	}
+	else if (waterheatermode == "Normal") {
+		if (hasMode(id, "Electric"))
+			mode = "Electric"
+		else if (hasMode(id, "Electric-Only"))
+			mode = "Electric-Only"
+		else if (hasMode(id, "Gas"))
+			mode = "Gas"
+		else if (hasMode(id, "gas"))
+			mode = "gas"
+	}
+	else if (waterHeater == "High Demand") {
+		if (!hasMode(id, "High Demand"))
+			mode = "Performance"
+	}
+	
+	apiPutWithRetry("/equipment/${id}/modes", [mode: mode])
 }
 
 def updateDevices() {
@@ -394,4 +423,16 @@ def logDebug(msg) {
     if (settings?.debugOutput) {
 		log.debug msg
 	}
+}
+
+def displayFooter(){
+	section() {
+		paragraph getFormat("line")
+		paragraph "<div style='color:#1A77C9;text-align:center'>Rheem EcoNet Integration<br><a href='https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7LBRPJRLJSDDN&source=url' target='_blank'><img src='https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_37x23.jpg' border='0' alt='PayPal Logo'></a><br><br>Please consider donating. This app took a lot of work to make.<br>If you find it valuable, I'd certainly appreciate it!</div>"
+	}       
+}
+
+def getFormat(type, myText=""){			// Modified from @Stephack Code   
+    if(type == "line") return "<hr style='background-color:#1A77C9; height: 1px; border: 0;'>"
+    if(type == "title") return "<h2 style='color:#1A77C9;font-weight: bold'>${myText}</h2>"
 }

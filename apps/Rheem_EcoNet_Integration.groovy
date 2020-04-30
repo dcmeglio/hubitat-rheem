@@ -170,11 +170,14 @@ def handleRefresh(device, id) {
 	if (data) {
 		device.sendEvent(name: "heatingSetpoint", value: data.setPoint, unit: "F")
 		device.sendEvent(name: "thermostatSetpoint", value: data.setPoint, unit: "F")
-		device.sendEvent(name: "thermostatOperatingState", value: data.inUse ? "heating" : "idle")
-		device.sendEvent(name: "temperature", value: data.upperTemp.toInteger(), unit: "F")
+		device.sendEvent(name: "thermostatOperatingState", value: data.inUse ? "heating" : "idle")		
 		device.sendEvent(name: "thermostatMode", value: translateThermostatMode(data.mode))
-		device.sendEvent(name: "upperTemp", value: data.upperTemp.toInteger(), unit: "F")
-		device.sendEvent(name: "lowerTemp", value: data.lowerTemp.toInteger(), unit: "F")
+		if (data.upperTemp != null) {
+			device.sendEvent(name: "temperature", value: data.upperTemp.toInteger(), unit: "F")
+			device.sendEvent(name: "upperTemp", value: data.upperTemp.toInteger(), unit: "F")
+		}
+		if (data.lowerTemp != null)
+			device.sendEvent(name: "lowerTemp", value: data.lowerTemp.toInteger(), unit: "F")
 		device.sendEvent(name: "ambientTemp", value: data.ambientTemp.toInteger(), unit: "F")
 		device.sendEvent(name: "waterHeaterMode", value: data.mode)
 		device.updateDataValue("minTemp", data.minSetPoint.toString())

@@ -2,9 +2,9 @@
 	"packageName": "Rheem EcoNet Integration",
 	"minimumHEVersion": "2.1.9",
 	"author": "Dominick Meglio",
-	"version": "1.2.0",
-	"dateReleased": "2020-04-26",
-	"releaseNotes": "Added setWaterHeaterMode command and waterHeaterMode attribute to set the water heater mode directly instead of the thermostat mode.",
+	"version": "1.2.1",
+	"dateReleased": "2020-04-30",
+	"releaseNotes": "Fixed an issue with some gas water heaters that do not report the current temperature.",
 	"documentationLink": "https://github.com/dcmeglio/hubitat-rheem/blob/master/README.md",
 	"communityLink": "https://community.hubitat.com/t/release-rheem-econet-integration/37338",
 	"apps" : [

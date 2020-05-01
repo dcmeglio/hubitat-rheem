@@ -178,7 +178,8 @@ def handleRefresh(device, id) {
 		}
 		if (data.lowerTemp != null)
 			device.sendEvent(name: "lowerTemp", value: data.lowerTemp.toInteger(), unit: "F")
-		device.sendEvent(name: "ambientTemp", value: data.ambientTemp.toInteger(), unit: "F")
+		if (data.ambientTemp != null)
+			device.sendEvent(name: "ambientTemp", value: data.ambientTemp.toInteger(), unit: "F")
 		device.sendEvent(name: "waterHeaterMode", value: data.mode)
 		device.updateDataValue("minTemp", data.minSetPoint.toString())
 		device.updateDataValue("maxTemp", data.maxSetPoint.toString())

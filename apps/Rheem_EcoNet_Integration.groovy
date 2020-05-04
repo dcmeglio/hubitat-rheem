@@ -36,6 +36,7 @@ def prefAccountAccess() {
 			input("password", "password", title: "Password", description: "Rheem EcoNet Password")
 		} 
 		section("Settings"){
+			input("refreshInterval", "number", title: "Poll Rheem EcoNet every N seconds", required: true, defaultValue: 30)
 			input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
 		}
 		displayFooter()
@@ -94,7 +95,9 @@ def initialize() {
 	cleanupChildDevices()
 	createChildDevices()
     
-	schedule("0/30 * * * * ? *", updateDevices)
+	def refreshEvery = refreshInterval ?: 30
+	
+	schedule("0/${refreshEvery} * * * * ? *", updateDevices)
 }
 
 def getDevices() { 	 

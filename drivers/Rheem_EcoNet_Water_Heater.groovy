@@ -54,20 +54,22 @@ def initialize() {
 		interfaces.mqtt.disconnect()
 	interfaces.mqtt.connect(apiUrl, device.hub.hardwareID, parent.getAccessToken(), systemKey)
 	pauseExecution(3000)
-	interfaces.mqtt.subscribe("user/${parent.getAccountId()}/device/reported", 0)
+	log.debug "subscribing"
+	interfaces.mqtt.subscribe("user/${parent.getAccountId()}/device/reported", 2)
+	interfaces.mqtt.subscribe("user/${parent.getAccountId()}/device/desired", 2)
 }
 
 def mqttClientStatus(String message) {
 	if (message == "Status: Connection succeeded") {
-		interfaces.mqtt.subscribe("user/${parent.getAccountId()}/device/reported", 0)
+		parent.logDebug "Connected to MQTT"
 	}
-	
-	log.debug "Status: " + message
+	else
+		log.debug "Status: " + message
 }
 
 def parse(String message) {
 	def topic = interfaces.mqtt.parseMessage(message)
-
+	log.debug topic.topic
     def payload =  new JsonSlurper().parseText(topic.payload) 
 log.debug payload
 

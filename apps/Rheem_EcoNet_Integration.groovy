@@ -10,7 +10,9 @@
  
 import groovy.transform.Field
 
-@Field static String apiUrl = "https://econet-api.rheemcert.com"
+@Field static String apiUrl = "https://rheem.clearblade.com"
+@Field static String systemKey = "e2e699cb0bb0bbb88fc8858cb5a401"
+@Field static String systemSecret = "E2E699CB0BE6C6FADDB1B0BC9A20"
 
 definition(
     name: "Rheem EcoNet Integration",
@@ -36,7 +38,6 @@ def prefAccountAccess() {
 			input("password", "password", title: "Password", description: "Rheem EcoNet Password")
 		} 
 		section("Settings"){
-			input("refreshInterval", "number", title: "Poll Rheem EcoNet every N seconds", required: true, defaultValue: 30)
 			input("debugOutput", "bool", title: "Enable debug logging?", defaultValue: true, displayDuringSetup: false, required: false)
 		}
 		displayFooter()
@@ -94,39 +95,52 @@ def uninstalled() {
 def initialize() {
 	cleanupChildDevices()
 	createChildDevices()
-    
-	def refreshEvery = refreshInterval ?: 30
-	
-	schedule("0/${refreshEvery} * * * * ? *", updateDevices)
 }
 
 def getDevices() { 	 
 	state.deviceList = [:]
-	def result = apiGet("/locations") 
+	def result = apiPost("/getLocation") 
 	if (result != null) {
-		result.equipment[0].each { 
-			if (it.type.equals("Water Heater")) {
-				state.deviceList[it.id.toString()]= it.name
+		result.results.locations.each { loc ->
+			// Yup the API has a typo and called it "equiptments"
+			loc.equiptments.each { equip -> 
+				if (equip.device_type == "WH") {
+					state.deviceList[equip.device_name+":"+equip.serial_number] = equip."@NAME".value
+				}
 			}
 		}
     }
     return state.deviceList
 }
 
-def getModes(id) {
-	if (state.deviceModes == null)
-		state.deviceModes = [:]
-	def result = apiGet("/equipment/${id}/modes")
+def getDeviceDetails(id) {
+	def deviceDetails = [:]
+
+	def result = apiPost("/getLocation")
 	if (result != null) {
-		state.deviceModes[id] = result
-	}
+		result.results.locations.each { loc ->
+			// Yup the API has a typo and called it "equiptments"
+			loc.equiptments.each { equip -> 
+				if (equip.device_name + ":" + equip.serial_number == id) {
+					deviceDetails.modes = equip."@MODE".constraints.enumText
+					deviceDetails.currentMode = equip."@MODE".status
+					deviceDetails.minTemp = equip."@SETPOINT".constraints.lowerLimit
+					deviceDetails.maxTemp = equip."@SETPOINT".constraints.upperLimit
+					deviceDetails.setpoint = equip."@SETPOINT".value
+					deviceDetails.running = equip."@RUNNING"
+				}
+			}
+		}
+    }
+	return deviceDetails
 }
 
-def hasMode(id, mode) {
+def hasMode(device, mode) {
+	def id = device.deviceNetworkId.replace("rheem:","")
 	def modes = state.deviceModes[id]
-	
+
 	for (deviceMode in modes) {
-		if (deviceMode.name == mode)
+		if (deviceMode == mode)
 			return true
 	}
 	return false
@@ -135,12 +149,22 @@ def hasMode(id, mode) {
 def createChildDevices() {
 	for (waterHeater in waterHeaters)
 	{
-		getModes(waterHeater)
+		def deviceDetails = getDeviceDetails(waterHeater)
 		def device = getChildDevice("rheem:" + waterHeater)
 		if (!device)
 		{
-			addChildDevice("dcm.rheem", "Rheem Econet Water Heater", "rheem:" + waterHeater, 1234, ["name": state.deviceList[waterHeater], isComponent: false])
+			device = addChildDevice("dcm.rheem", "Rheem Econet Water Heater", "rheem:" + waterHeater, 1234, ["name": state.deviceList[waterHeater], isComponent: false])
 		}
+		if (state.devicesModes == null)
+			state.deviceModes = [:]
+		state.deviceModes[waterHeater] = deviceDetails.modes
+		device.updateDataValue("minTemp", deviceDetails.minTemp.toString())
+		device.updateDataValue("maxTemp", deviceDetails.maxTemp.toString())
+		device.sendEvent(name: "heatingSetpoint", value: deviceDetails.setpoint, unit: "F")
+		device.sendEvent(name: "thermostatSetpoint", value: deviceDetails.setpoint, unit: "F")
+		device.sendEvent(name: "thermostatOperatingState", value: deviceDetails.running == "Running" ? "heating" : "idle")	
+		device.sendEvent(name: "waterHeaterMode", value: deviceDetails.currentMode)
+		device.sendEvent(name: "thermostatMode", value: translateThermostatMode(deviceDetails.currentMode))
 	}
 }
 
@@ -167,14 +191,30 @@ def cleanupChildDevices()
 	}
 }
 
+def translateThermostatMode(mode) {
+	switch (mode) {
+		case "ENERGY SAVING":
+			return "auto"
+        case "HIGH DEMAND":
+		case "PERFORMANCE":
+            return "emergency heat"
+        case "HEAT PUMP":
+		case "HEAT PUMP ONLY":
+		case "HEAT PUMP ONLY ":
+		case "ELECTRIC":
+		case "ELECTRIC MODE":
+		case "GAS":
+            return "heat"
+		case "OFF":
+			return "off"
+	}
+}
+
 def handleRefresh(device, id) {
 	logDebug "Refreshing data for ${id}"
 	def data = apiGet("/equipment/${id}")
 	if (data) {
-		device.sendEvent(name: "heatingSetpoint", value: data.setPoint, unit: "F")
-		device.sendEvent(name: "thermostatSetpoint", value: data.setPoint, unit: "F")
-		device.sendEvent(name: "thermostatOperatingState", value: data.inUse ? "heating" : "idle")		
-		device.sendEvent(name: "thermostatMode", value: translateThermostatMode(data.mode))
+			
 		if (data.upperTemp != null) {
 			device.sendEvent(name: "temperature", value: data.upperTemp.toInteger(), unit: "F")
 			device.sendEvent(name: "upperTemp", value: data.upperTemp.toInteger(), unit: "F")
@@ -183,84 +223,9 @@ def handleRefresh(device, id) {
 			device.sendEvent(name: "lowerTemp", value: data.lowerTemp.toInteger(), unit: "F")
 		if (data.ambientTemp != null)
 			device.sendEvent(name: "ambientTemp", value: data.ambientTemp.toInteger(), unit: "F")
-		device.sendEvent(name: "waterHeaterMode", value: data.mode)
-		device.updateDataValue("minTemp", data.minSetPoint.toString())
-		device.updateDataValue("maxTemp", data.maxSetPoint.toString())
+		
+		
 	}
-}
-
-def handlesetHeatingSetPoint(device, id, temperature) {
-	def minTemp = new BigDecimal(device.getDataValue("minTemp"))
-	def maxTemp = new BigDecimal(device.getDataValue("maxTemp"))
-	if (temperature < minTemp)
-		temperature = minTemp
-	else if (temperature > maxTemp)
-		temperature = maxTemp
-	
-	apiPutWithRetry("/equipment/${id}", [setPoint: temperature])
-}
-
-def handlesetThermostatMode(device, id, thermostatmode) {
-	def waterHeaterMode = ""
-	switch (thermostatmode) {
-		case "off":
-			waterHeaterMode = "Off"
-			break
-		case "cool":
-			log.error "Cooling mode not supported"
-			return
-		case "heat":
-			if (hasMode(id, "Heat Pump"))
-				waterHeaterMode = "Heat Pump"
-			else if (hasMode(id, "Heat Pump Only"))
-				waterHeaterMode = "Heat Pump Only"
-			else if (hasMode("Electric"))
-				waterHeaterMode = "Electric"
-			else if (hasMode("Electric-Only"))
-				waterHeaterMode = "Electric-Only"
-			else if (hasMode("gas"))
-				waterHeaterMode = "gas"
-			else if (hasMode("Gas"))
-				waterHeaterMode = "Gas"
-				break
-		case "auto":
-			waterHeaterMode = "Energy Saver"
-			break
-		case "emergency heat":
-			if (hasMode(id, "High Demand"))
-				waterHeaterMode = "High Demand"
-			else
-				waterHeaterMode = "Performance"
-			break
-		default:
-			waterHeaterMode = thermostatmode
-	}
-	
-	apiPutWithRetry("/equipment/${id}/modes", [mode: waterHeaterMode])
-}
-
-def handlesetWaterHeatertMode(device, id, waterheatermode) {
-	def mode = waterheatermode
-	if (waterheatermode == "Heat Pump") {
-		if (!hasMode(id, "Heat Pump"))
-			mode = "Heat Pump Only"
-	}
-	else if (waterheatermode == "Normal") {
-		if (hasMode(id, "Electric"))
-			mode = "Electric"
-		else if (hasMode(id, "Electric-Only"))
-			mode = "Electric-Only"
-		else if (hasMode(id, "Gas"))
-			mode = "Gas"
-		else if (hasMode(id, "gas"))
-			mode = "gas"
-	}
-	else if (waterHeater == "High Demand") {
-		if (!hasMode(id, "High Demand"))
-			mode = "Performance"
-	}
-	
-	apiPutWithRetry("/equipment/${id}/modes", [mode: mode])
 }
 
 def updateDevices() {
@@ -270,99 +235,70 @@ def updateDevices() {
 	}
 }
 
-def translateThermostatMode(mode) {
-	switch (mode) {
-		case "Energy Saver":
-			return "auto"
-        case "High Demand":
-		case "Performance":
-            return "emergency heat"
-        case "Heat Pump":
-		case "Heat Pump Only":
-		case "Electric":
-		case "Electric-Only":
-		case "gas":
-		case "Gas":
-            return "heat"
-		case "Off":
-			return "off"
-	}
-}
+
 
 def login() {
 	def params = [
     	uri: apiUrl,
-        path: "/auth/token",
-        headers: ["Authorization": "Basic Y29tLnJoZWVtLmVjb25ldF9hcGk6c3RhYmxla2VybmVs"],
-        requestContentType: "application/x-www-form-urlencoded"
+        path: "/api/v/1/user/auth",
+        headers: [
+			"ClearBlade-SystemKey": systemKey,
+			"ClearBlade-SystemSecret": systemSecret
+		],
+        requestContentType: "application/json"
     ]
-    if (state.expiration == null) {
-		def result = false
-    	try {
-			params.body = [
-				username: username,
-				password: password,
-				"grant_type": "password"
-			]
-			httpPost(params) { resp -> 
-            	if (resp.status == 200) {
-					state.access_token = resp.data.access_token
-					state.refresh_token = resp.data.refresh_token
-					state.expiration = now()+(resp.data.expires_in*1000)
-                	result = true
-            	} else {
-                	result = false
-            	} 	
-        	}
-			return result
+
+	try {
+		params.body = [
+			email: username,
+			password: password
+		]
+		httpPost(params) { resp -> 
+			if (resp.status == 200) {
+				if (resp.data.options.success) {
+					state.access_token = resp.data.user_token
+					state.account_id = resp.data.options.account_id
+					result = true
+				}
+				else
+					result = false
+			} else {
+				result = false
+			} 	
 		}
-		catch (e)	{
-			log.error "Login error: ${e}"
-        	return false
-		}
-	} 
-	else if (state.expiration >= now()-100000)
-	{
-		return true
+		return result
 	}
-	else {
-		def result = false
-    	try {
-			params.body = [
-				refresh_token:state.refresh_token,
-				"grant_type": "refresh"
-			]
-			httpPost(params) { resp -> 
-            	if (resp.status == 200) {
-					state.access_token = resp.data.access_token
-					state.refresh_token = resp.data.refresh_token
-					state.expiration = now()+(resp.data.expires_in*1000)
-                	result = true
-            	} else {
-                	result = false
-            	} 	
-        	}
-			return result
-		}
-		catch (e)	{
-			log.error "Refresh login error: ${e}"
-        	return false
-		}	
+	catch (e)	{
+		log.error "Login error: ${e}"
+		return false
 	}
 }
 
-def apiGet(path) {	
+def getAccessToken() {
+	return state.access_token
+}
+
+def getAccountId() {
+	return state.account_id
+}
+
+def apiPost(path) {	
 	if (login()) {
 		def params = [ 
 			uri: apiUrl,
-			path: path,
-			headers: ["Authorization": "Bearer " + state.access_token ],
+			path: "/api/v/1/code/${systemKey}${path}",
+			headers: [
+				"ClearBlade-SystemKey": systemKey,
+				"ClearBlade-SystemSecret": systemSecret,
+				"ClearBlade-UserToken": state.access_token,
+				"User-Agent": "EcoNet/4.0.4 (com.rheem.econetprod; build:3577; iOS 13.5.0) Alamofire/4.9.1"
+			],
 			requestContentType: "application/json",
 		] 
-
+		
 		def result
 		try {
-			httpGet(params) { resp -> 
+			httpPost(params) { resp -> 
 				if (resp.status >= 400) {
 					log.error "API Error: ${resp.status}"
 					if (resp.status == 401)
@@ -381,49 +317,39 @@ def apiGet(path) {
 		return null
 }
 
-def apiPut(path, body) {	
+def apiGet(path) {	
 	if (login()) {
 		def params = [ 
 			uri: apiUrl,
-			path: path,
-			headers: ["Authorization": "Bearer " + state.access_token ],
+			path: "/api/v/1/code/${systemKey}${path}",
+			headers: [
+				"ClearBlade-SystemKey": systemKey,
+				"ClearBlade-SystemSecret": systemSecret,
+				"ClearBlade-UserToken": state.access_token,
+				"User-Agent": "EcoNet/4.0.4 (com.rheem.econetprod; build:3577; iOS 13.5.0) Alamofire/4.9.1"
+			],
 			requestContentType: "application/json",
-			body: body
-		]
-		logDebug "apiPut: ${params}"
+		] 
+		
+		def result
 		try {
-			def result = null
-			httpPut(params) { resp ->
+			httpPost(params) { resp -> 
 				if (resp.status >= 400) {
 					log.error "API Error: ${resp.status}"
 					if (resp.status == 401)
 						state.expiration = null
 				}
-				result = resp
+				result = resp.data
 			}
-			return result
 		}
 		catch (e)	{
-			log.error "API Put Error: ${e}"
+			log.error "API Get Error: ${e}"
 			return null
 		}
+		return result
 	}
-	else {
+	else
 		return null
-	}
-}
-
-def apiPutWithRetry(path, body) {	
-	def retries = 5
-	def result = apiPut(path, body)
-	while (result == null) {
-		log.error "API Error, retrying ${retries}"
-		retries--
-		if (retries <= 0)
-			return
-		pauseExecution(2500)
-	}
-	return result.data
 }
 
 def logDebug(msg) {

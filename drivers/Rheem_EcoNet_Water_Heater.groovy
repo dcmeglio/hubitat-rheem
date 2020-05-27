@@ -10,11 +10,11 @@
  
 metadata {
     definition (name: "Rheem Econet Water Heater", namespace: "dcm.rheem", author: "dmeglio@gmail.com") {
+		capability "Initialize"
 		capability "Thermostat"
 		capability "Actuator"
 		capability "Refresh"
 		capability "Sensor"
-		capability "Configuration"
 		capability "ThermostatHeatingSetpoint"
         capability "TemperatureMeasurement"
 		capability "ThermostatSetpoint"
@@ -30,6 +30,15 @@ metadata {
     }
 }
 
+import groovy.transform.Field
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+import java.text.SimpleDateFormat
+
+@Field static String apiUrl = "tcp://rheem.clearblade.com:1883"
+@Field static String systemKey = "e2e699cb0bb0bbb88fc8858cb5a401"
+@Field static String systemSecret = "E2E699CB0BE6C6FADDB1B0BC9A20"
+
 def installed() {
 	initialize()
 }
@@ -41,10 +50,58 @@ def updated() {
 def initialize() {
 	sendEvent(name: "supportedThermostatModes", value: ["off", "heat", "emergency heat", "auto"])
 	sendEvent(name: "supportedThermostatFanModes", value: [])
+	if (interfaces.mqtt.isConnected())
+		interfaces.mqtt.disconnect()
+	interfaces.mqtt.connect(apiUrl, device.hub.hardwareID, parent.getAccessToken(), systemKey)
+	pauseExecution(3000)
+	interfaces.mqtt.subscribe("user/${parent.getAccountId()}/device/reported", 0)
 }
 
-def configure() {
-	initialize()
+def mqttClientStatus(String message) {
+	if (message == "Status: Connection succeeded") {
+		interfaces.mqtt.subscribe("user/${parent.getAccountId()}/device/reported", 0)
+	}
+	
+	log.debug "Status: " + message
+}
+
+def parse(String message) {
+	def topic = interfaces.mqtt.parseMessage(message)
+
+    def payload =  new JsonSlurper().parseText(topic.payload) 
+log.debug payload
+
+	if ("rheem:" + payload?.device_name + ":" + payload?.serial_number == device.deviceNetworkId) {
+		if (payload."@SETPOINT" != null) {
+			device.sendEvent(name: "heatingSetpoint", value: payload."@SETPOINT", unit: "F")
+			device.sendEvent(name: "thermostatSetpoint", value: payload."@SETPOINT", unit: "F")
+		}
+		if (payload."@MODE" != null) {
+			device.sendEvent(name: "thermostatMode", value: parent.translateThermostatMode(payload."@MODE".status))
+			device.sendEvent(name: "waterHeaterMode", value: payload."@MODE".status)
+		}
+		if (payload."@RUNNING" != null) {
+			device.sendEvent(name: "thermostatOperatingState", value: payload."@RUNNING" == "Running" ? "heating" : "idle")	
+		}
+	}
+}
+
+def getDeviceName() {
+	return device.deviceNetworkId.split(':')[1]
+}
+
+def getSerialNumber() {
+	return device.deviceNetworkId.split(':')[2]
+}
+
+def buildMQTTMessage() {
+	def sdf = new SimpleDateFormat("Y-M-d'T'H:m:s.S")
+	def payload = [
+		transactionId: "ANDROID_"+sdf.format(new Date()),
+		device_name: getDeviceName(),
+		serial_number: getSerialNumber()
+	]
+	return payload
 }
 
 def refresh() {
@@ -62,17 +119,64 @@ def setSchedule(obj) {
 def setThermostatFanMode(fanmode) {
     log.error "setThermostatFanMode called but not supported"
 }
-
+	
 def setHeatingSetpoint(temperature) {
-	parent.handlesetHeatingSetPoint(device, device.deviceNetworkId.split(":")[1], temperature)
+	def payload = buildMQTTMessage()
+	def minTemp = new BigDecimal(device.getDataValue("minTemp"))
+	def maxTemp = new BigDecimal(device.getDataValue("maxTemp"))
+	if (temperature < minTemp)
+		temperature = minTemp
+	else if (temperature > maxTemp)
+		temperature = maxTemp
+	payload."@SETPOINT" = temperature
+
+	log.debug JsonOutput.toJson(payload)
+	interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
 }
 
 def setThermostatMode(thermostatmode) {
-	parent.handlesetThermostatMode(device, device.deviceNetworkId.split(":")[1],thermostatmode)
+	def payload = buildMQTTMessage()
+	log.debug thermostatmode
+	payload."@MODE" = translateThermostatModeToEnum(thermostatmode)
+	log.debug payload
+	interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
 }
 
 def setWaterHeaterMode(waterheatermode) {
-	parent.handlesetWaterHeatertMode(device, device.deviceNetworkId.split(":")[1],waterheatermode)
+	def payload = buildMQTTMessage()
+	payload."@MODE" = translateWaterHeaterModeToEnum(waterheatermode)
+	interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
+}
+
+def translateWaterHeaterModeToEnum(waterheatermode) {
+	switch (waterheatermode) {
+		case "Off":
+			return 0
+		case "Energy Saver":
+			return 1
+        case "Heat Pump":
+			return 2
+		case "High Demand":
+            return 3
+		case "Normal":
+            return 4
+	}
+}
+
+def translateThermostatModeToEnum(waterheatermode) {
+	switch (waterheatermode) {
+		case "off":
+			return 0
+		case "auto":
+			return 1
+        case "heat":
+			if (parent.hasMode(device, "HEAT PUMP") || parent.hasMode(device, "HEAT PUMP ONLY") || parent.hasMode(device, "HEAT PUMP ONLY "))
+				return 2
+			return 4
+		case "emergency heat":
+            return 3
+
+	}
 }
 
 def auto() {

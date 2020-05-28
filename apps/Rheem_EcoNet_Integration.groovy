@@ -288,6 +288,7 @@ def apiPost(path) {
 		def params = [ 
 			uri: apiUrl,
 			path: "/api/v/1/code/${systemKey}${path}",
+			timeout: 60,
 			headers: [
 				"ClearBlade-SystemKey": systemKey,
 				"ClearBlade-SystemSecret": systemSecret,

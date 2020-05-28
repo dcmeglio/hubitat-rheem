@@ -101,6 +101,7 @@ def getDevices() {
 	state.deviceList = [:]
 	def result = apiPost("/getLocation") 
 	if (result != null) {
+		log.debug result.results
 		result.results.locations.each { loc ->
 			// Yup the API has a typo and called it "equiptments"
 			loc.equiptments.each { equip -> 
@@ -118,6 +119,7 @@ def getDeviceDetails(id) {
 
 	def result = apiPost("/getLocation")
 	if (result != null) {
+		
 		result.results.locations.each { loc ->
 			// Yup the API has a typo and called it "equiptments"
 			loc.equiptments.each { equip -> 
@@ -235,8 +237,6 @@ def updateDevices() {
 	}
 }
 
-
-
 def login() {
 	def params = [
     	uri: apiUrl,
@@ -255,6 +255,7 @@ def login() {
 		]
 		httpPost(params) { resp -> 
 			if (resp.status == 200) {
+				log.debug resp.data
 				if (resp.data.options.success) {
 					state.access_token = resp.data.user_token
 					state.account_id = resp.data.options.account_id

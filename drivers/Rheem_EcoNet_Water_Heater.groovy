@@ -16,7 +16,6 @@ metadata {
 		capability "Refresh"
 		capability "Sensor"
 		capability "ThermostatHeatingSetpoint"
-        capability "TemperatureMeasurement"
 		capability "ThermostatSetpoint"
 		capability "ThermostatOperatingState"
 		capability "ThermostatMode"
@@ -24,9 +23,6 @@ metadata {
 		command "setWaterHeaterMode", [[name:"Mode*","type":"ENUM","description":"Mode","constraints":["Heat Pump", "Energy Saver", "High Demand", "Normal", "Off"]]]
 		
 		attribute "waterHeaterMode", "ENUM"
-		attribute "upperTemp", "STRING"
-		attribute "lowerTemp", "STRING"
-		attribute "ambientTemp", "STRING"
     }
 }
 

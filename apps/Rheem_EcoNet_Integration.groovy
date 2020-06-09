@@ -34,6 +34,7 @@ preferences {
 def prefAccountAccess() {
 	return dynamicPage(name: "prefAccountAccess", title: "Connect to Rheem EcoNet", nextPage:"prefListDevice", uninstall:false, install: false) {
 		section("EcoNet Login Information"){
+			paragraph "<b>Note: Your username and password are always transmitted securely. However, Hubitat does not currently support MQTTS. As a result, your authentication token is sent to Rheem unencrypted over MQTT. Theoretically someone could setup a sniffer and gain this token which would allow them to control your water heater until it expires. Please be aware of this risk before using this app. This app will be updated once MQTTS is supported.</b>"
 			input("username", "email", title: "Username", description: "Rheem EcoNet Username")
 			input("password", "password", title: "Password", description: "Rheem EcoNet Password")
 		} 

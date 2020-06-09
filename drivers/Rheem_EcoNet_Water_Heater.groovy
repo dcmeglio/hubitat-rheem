@@ -60,14 +60,13 @@ def mqttClientStatus(String message) {
 		parent.logDebug "Connected to MQTT"
 	}
 	else
-		log.debug "Status: " + message
+		log.warn "Status: " + message
 }
 
 def parse(String message) {
 	def topic = interfaces.mqtt.parseMessage(message)
-	log.debug topic.topic
+	logDebug topic.topic
     def payload =  new JsonSlurper().parseText(topic.payload) 
-log.debug payload
 
 	if ("rheem:" + payload?.device_name + ":" + payload?.serial_number == device.deviceNetworkId) {
 		if (payload."@SETPOINT" != null) {
@@ -75,8 +74,15 @@ log.debug payload
 			device.sendEvent(name: "thermostatSetpoint", value: payload."@SETPOINT", unit: "F")
 		}
 		if (payload."@MODE" != null) {
-			device.sendEvent(name: "thermostatMode", value: parent.translateThermostatMode(payload."@MODE".status))
-			device.sendEvent(name: "waterHeaterMode", value: payload."@MODE".status)
+			if (!payload."@MODE".toString().isInteger()) {
+				device.sendEvent(name: "thermostatMode", value: parent.translateThermostatMode(payload."@MODE".status))
+				device.sendEvent(name: "waterHeaterMode", value: payload."@MODE".status)
+			}
+			else {
+				def mode = translateEnumToWaterHeaderMode(payload."@MODE")
+				device.sendEvent(name: "thermostatMode", value: parent.translateThermostatMode(mode))
+				device.sendEvent(name: "waterHeaterMode", value: mode)
+			}
 		}
 		if (payload."@RUNNING" != null) {
 			device.sendEvent(name: "thermostatOperatingState", value: payload."@RUNNING" == "Running" ? "heating" : "idle")	
@@ -158,6 +164,21 @@ def translateWaterHeaterModeToEnum(waterheatermode) {
             return 3
 		case "Normal":
             return 4
+	}
+}
+
+def translateEnumToWaterHeaderMode(enumVal) {
+	switch (enumVal) {
+		case 0:
+			return "OFF"
+		case 1:
+			return "ENERGY SAVING"
+		case 2:
+			return "HEAT PUMP ONLY"
+		case 3:
+			return "HIGH DEMAND"
+		case 4:
+			return "ELECTRIC"
 	}
 }
 

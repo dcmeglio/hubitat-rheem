@@ -2,7 +2,7 @@
 	"packageName": "Rheem EcoNet Integration",
 	"minimumHEVersion": "2.1.9",
 	"author": "Dominick Meglio",
-	"version": "2.0.1",
+	"version": "2.0.2",
 	"dateReleased": "2020-06-08",
 	"releaseNotes": "Fixed a bug that occassionally caused errors when switching the mode. Added a warning about MQTT.",
 	"documentationLink": "https://github.com/dcmeglio/hubitat-rheem/blob/master/README.md",

@@ -65,7 +65,7 @@ def mqttClientStatus(String message) {
 
 def parse(String message) {
 	def topic = interfaces.mqtt.parseMessage(message)
-	logDebug topic.topic
+	parent.logDebug topic.topic
     def payload =  new JsonSlurper().parseText(topic.payload) 
 
 	if ("rheem:" + payload?.device_name + ":" + payload?.serial_number == device.deviceNetworkId) {

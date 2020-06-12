@@ -13,7 +13,6 @@ metadata {
 		capability "Initialize"
 		capability "Thermostat"
 		capability "Actuator"
-		capability "Refresh"
 		capability "Sensor"
 		capability "ThermostatHeatingSetpoint"
 		capability "ThermostatSetpoint"
@@ -48,7 +47,7 @@ def initialize() {
 	sendEvent(name: "supportedThermostatFanModes", value: [])
 	if (interfaces.mqtt.isConnected())
 		interfaces.mqtt.disconnect()
-	interfaces.mqtt.connect(apiUrl, device.hub.hardwareID, parent.getAccessToken(), systemKey)
+	interfaces.mqtt.connect(apiUrl, parent.getClientId(), parent.getAccessToken(), systemKey)
 	pauseExecution(3000)
 	log.debug "subscribing"
 	interfaces.mqtt.subscribe("user/${parent.getAccountId()}/device/reported", 2)
@@ -106,10 +105,6 @@ def buildMQTTMessage() {
 		serial_number: getSerialNumber()
 	]
 	return payload
-}
-
-def refresh() {
-	parent.handleRefresh(device, device.deviceNetworkId.split(":")[1])
 }
 
 def setCoolingSetpoint(temperature) {

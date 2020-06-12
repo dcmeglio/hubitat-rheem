@@ -213,29 +213,8 @@ def translateThermostatMode(mode) {
 	}
 }
 
-def handleRefresh(device, id) {
-	logDebug "Refreshing data for ${id}"
-	def data = apiGet("/equipment/${id}")
-	if (data) {
-			
-		if (data.upperTemp != null) {
-			device.sendEvent(name: "temperature", value: data.upperTemp.toInteger(), unit: "F")
-			device.sendEvent(name: "upperTemp", value: data.upperTemp.toInteger(), unit: "F")
-		}
-		if (data.lowerTemp != null)
-			device.sendEvent(name: "lowerTemp", value: data.lowerTemp.toInteger(), unit: "F")
-		if (data.ambientTemp != null)
-			device.sendEvent(name: "ambientTemp", value: data.ambientTemp.toInteger(), unit: "F")
-		
-		
-	}
-}
-
-def updateDevices() {
-	for (waterHeater in waterHeaters)
-	{
-		handleRefresh(getChildDevice("rheem:"+waterHeater), waterHeater)
-	}
+def getClientId() {
+	return getHubUID()
 }
 
 def login() {

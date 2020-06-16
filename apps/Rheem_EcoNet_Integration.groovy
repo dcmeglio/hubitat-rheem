@@ -125,8 +125,14 @@ def getDeviceDetails(id) {
 			// Yup the API has a typo and called it "equiptments"
 			loc.equiptments.each { equip -> 
 				if (equip.device_name + ":" + equip.serial_number == id) {
-					deviceDetails.modes = equip."@MODE".constraints.enumText
-					deviceDetails.currentMode = equip."@MODE".status
+					if (equip."@MODE" != null) {
+						deviceDetails.modes = equip."@MODE".constraints.enumText
+						deviceDetails.currentMode = equip."@MODE".status
+						deviceDetails.tempOnly = false
+					}
+					else {
+						deviceDetails.tempOnly = true
+					}
 					deviceDetails.minTemp = equip."@SETPOINT".constraints.lowerLimit
 					deviceDetails.maxTemp = equip."@SETPOINT".constraints.upperLimit
 					deviceDetails.setpoint = equip."@SETPOINT".value
@@ -163,6 +169,7 @@ def createChildDevices() {
 		state.deviceModes[waterHeater] = deviceDetails.modes
 		device.updateDataValue("minTemp", deviceDetails.minTemp.toString())
 		device.updateDataValue("maxTemp", deviceDetails.maxTemp.toString())
+		device.updateDataValue("tempOnly", deviceDetails.tempOnly.toString())
 		device.sendEvent(name: "heatingSetpoint", value: deviceDetails.setpoint, unit: "F")
 		device.sendEvent(name: "thermostatSetpoint", value: deviceDetails.setpoint, unit: "F")
 		device.sendEvent(name: "thermostatOperatingState", value: deviceDetails.running == "Running" ? "heating" : "idle")	

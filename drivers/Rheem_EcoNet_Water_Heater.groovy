@@ -43,7 +43,10 @@ def updated() {
 }
 
 def initialize() {
-	sendEvent(name: "supportedThermostatModes", value: ["off", "heat", "emergency heat", "auto"])
+	if (device.getDataValue("tempOnly") != "true")
+		sendEvent(name: "supportedThermostatModes", value: ["off", "heat", "emergency heat", "auto"])
+	else
+		sendEvent(name: "supportedThermostatModes", value: [])
 	sendEvent(name: "supportedThermostatFanModes", value: [])
 	if (interfaces.mqtt.isConnected())
 		interfaces.mqtt.disconnect()
@@ -138,17 +141,25 @@ def setHeatingSetpoint(temperature) {
 }
 
 def setThermostatMode(thermostatmode) {
-	def payload = buildMQTTMessage()
-	log.debug thermostatmode
-	payload."@MODE" = translateThermostatModeToEnum(thermostatmode)
-	log.debug payload
-	interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
+	if (device.getDataValue("tempOnly") != "true") {
+		def payload = buildMQTTMessage()
+		log.debug thermostatmode
+		payload."@MODE" = translateThermostatModeToEnum(thermostatmode)
+		log.debug payload
+		interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
+	}
+	else
+		log.error "setThermostatMode called but not supported"
 }
 
 def setWaterHeaterMode(waterheatermode) {
-	def payload = buildMQTTMessage()
-	payload."@MODE" = translateWaterHeaterModeToEnum(waterheatermode)
-	interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
+	if (device.getDataValue("tempOnly") != "true") {
+		def payload = buildMQTTMessage()
+		payload."@MODE" = translateWaterHeaterModeToEnum(waterheatermode)
+		interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
+	}
+	else
+		log.error "setThermostatMode called but not supported"
 }
 
 def translateWaterHeaterModeToEnum(waterheatermode) {
@@ -198,19 +209,36 @@ def translateThermostatModeToEnum(waterheatermode) {
 }
 
 def auto() {
-	setThermostatMode("auto")
+	if (device.getDataValue("tempOnly") != "true") {
+		setThermostatMode("auto")
+	}
+	else
+		log.error "auto called but not supported"
 }
 
 def emergencyHeat() {
-	setThermostatMode("emergency heat")
+	if (device.getDataValue("tempOnly") != "true") {
+		setThermostatMode("emergency heat")
+	}
+	else
+		log.error "emergencyHeat called but not supported"
+
 }
 
 def off() {
-	setThermostatMode("off")
+	if (device.getDataValue("tempOnly") != "true") {
+		setThermostatMode("off")
+	}
+	else
+		log.error "off called but not supported"
 }
 
 def heat() {
-	setThermostatMode("heat")
+	if (device.getDataValue("tempOnly") != "true") {
+		setThermostatMode("heat")
+	}
+	else
+		log.error "heat called but not supported"
 }
 
 def cool() {

@@ -58,6 +58,10 @@ def mqttClientStatus(String message) {
 	if (message == "Status: Connection succeeded") {
 		parent.logDebug "Connected to MQTT"
 	}
+	else if (message == "Error: send error: Client is not connected") {
+		parent.logDebug "Lost MQTT connection, reconnecting."
+		interfaces.mqtt.connect(apiUrl, parent.getClientId(), parent.getAccessToken(), systemKey)
+	}
 	else
 		log.warn "Status: " + message
 }

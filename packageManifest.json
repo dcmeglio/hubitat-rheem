@@ -2,9 +2,9 @@
 	"packageName": "Rheem EcoNet Integration",
 	"minimumHEVersion": "2.1.9",
 	"author": "Dominick Meglio",
-	"version": "2.0.3",
-	"dateReleased": "2020-06-12",
-	"releaseNotes": "Fixed a bug that could cause MQTT disconnects.",
+	"version": "2.0.4",
+	"dateReleased": "2020-06-17",
+	"releaseNotes": "Added MQTT reconnect if an error occurs during a send.",
 	"documentationLink": "https://github.com/dcmeglio/hubitat-rheem/blob/master/README.md",
 	"communityLink": "https://community.hubitat.com/t/release-rheem-econet-integration/37338",
 	"apps" : [

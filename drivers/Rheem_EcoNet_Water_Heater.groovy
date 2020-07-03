@@ -42,6 +42,22 @@ def updated() {
 	initialize()
 }
 
+def mqttConnectUntilSuccessful() {
+	try {
+		interfaces.mqtt.connect(apiUrl, parent.getClientId(), parent.getAccessToken(), systemKey)
+		pauseExecution(3000)
+		interfaces.mqtt.subscribe("user/${parent.getAccountId()}/device/reported", 2)
+		interfaces.mqtt.subscribe("user/${parent.getAccountId()}/device/desired", 2)
+		return true
+	}
+	catch (e)
+	{
+		log.warn "Lost connection to MQTT, retrying in 15 seconds"
+		runIn(15, "mqttConnectUntilSuccessful")
+		return false
+	}
+}
+
 def initialize() {
 	if (device.getDataValue("tempOnly") != "true")
 		sendEvent(name: "supportedThermostatModes", value: ["off", "heat", "emergency heat", "auto"])
@@ -50,20 +66,22 @@ def initialize() {
 	sendEvent(name: "supportedThermostatFanModes", value: [])
 	if (interfaces.mqtt.isConnected())
 		interfaces.mqtt.disconnect()
-	interfaces.mqtt.connect(apiUrl, parent.getClientId(), parent.getAccessToken(), systemKey)
-	pauseExecution(3000)
-	log.debug "subscribing"
-	interfaces.mqtt.subscribe("user/${parent.getAccountId()}/device/reported", 2)
-	interfaces.mqtt.subscribe("user/${parent.getAccountId()}/device/desired", 2)
+	mqttConnectUntilSuccessful()
+
 }
 
 def mqttClientStatus(String message) {
 	if (message == "Status: Connection succeeded") {
 		parent.logDebug "Connected to MQTT"
 	}
-	else if (message == "Error: send error: Client is not connected") {
+	else if (message.contains("Connection list") || message.contains("Client is not connected")) {
 		parent.logDebug "Lost MQTT connection, reconnecting."
-		interfaces.mqtt.connect(apiUrl, parent.getClientId(), parent.getAccessToken(), systemKey)
+		try {
+            interfaces.mqtt.disconnect() // Guarantee we're disconnected
+        }
+        catch (e) {
+        }
+		mqttConnectUntilSuccessful()
 	}
 	else
 		log.warn "Status: " + message
@@ -127,26 +145,30 @@ def setThermostatFanMode(fanmode) {
 }
 	
 def setHeatingSetpoint(temperature) {
-	def payload = buildMQTTMessage()
-	def minTemp = new BigDecimal(device.getDataValue("minTemp"))
-	def maxTemp = new BigDecimal(device.getDataValue("maxTemp"))
-	if (temperature < minTemp)
-		temperature = minTemp
-	else if (temperature > maxTemp)
-		temperature = maxTemp
-	payload."@SETPOINT" = temperature
+	if (interfaces.mqtt.isConnected()) {
+		def payload = buildMQTTMessage()
+		def minTemp = new BigDecimal(device.getDataValue("minTemp"))
+		def maxTemp = new BigDecimal(device.getDataValue("maxTemp"))
+		if (temperature < minTemp)
+			temperature = minTemp
+		else if (temperature > maxTemp)
+			temperature = maxTemp
+		payload."@SETPOINT" = temperature
 
-	log.debug JsonOutput.toJson(payload)
-	interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
+		log.debug JsonOutput.toJson(payload)
+		interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
+	}
 }
 
 def setThermostatMode(thermostatmode) {
 	if (device.getDataValue("tempOnly") != "true") {
-		def payload = buildMQTTMessage()
-		log.debug thermostatmode
-		payload."@MODE" = translateThermostatModeToEnum(thermostatmode)
-		log.debug payload
-		interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
+		if (interfaces.mqtt.isConnected()) {
+			def payload = buildMQTTMessage()
+			log.debug thermostatmode
+			payload."@MODE" = translateThermostatModeToEnum(thermostatmode)
+			log.debug payload
+			interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
+		}
 	}
 	else
 		log.error "setThermostatMode called but not supported"
@@ -154,9 +176,11 @@ def setThermostatMode(thermostatmode) {
 
 def setWaterHeaterMode(waterheatermode) {
 	if (device.getDataValue("tempOnly") != "true") {
-		def payload = buildMQTTMessage()
-		payload."@MODE" = translateWaterHeaterModeToEnum(waterheatermode)
-		interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
+		if (interfaces.mqtt.isConnected()) {
+			def payload = buildMQTTMessage()
+			payload."@MODE" = translateWaterHeaterModeToEnum(waterheatermode)
+			interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
+		}
 	}
 	else
 		log.error "setThermostatMode called but not supported"

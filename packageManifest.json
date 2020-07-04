@@ -13,7 +13,8 @@
 			"name": "Rheem EcoNet Integration",
 			"namespace": "dcm.rheem",
 			"location": "https://raw.githubusercontent.com/dcmeglio/hubitat-rheem/master/apps/Rheem_EcoNet_Integration.groovy",
-			"required": true
+			"required": true,
+			"primary": true
 		}
 	],
 	"drivers": [

@@ -1,10 +1,10 @@
 {
 	"packageName": "Rheem EcoNet Integration",
-	"minimumHEVersion": "2.1.9",
+	"minimumHEVersion": "2.2.2",
 	"author": "Dominick Meglio",
-	"version": "2.0.5",
-	"dateReleased": "2020-07-01",
-	"releaseNotes": "Added MQTT connection retries if something goes wrong during connection to the API.",
+	"version": "2.1.0",
+	"dateReleased": "2020-07-10",
+	"releaseNotes": "Added support for MQTTS so your credentials are always encrypted.",
 	"documentationLink": "https://github.com/dcmeglio/hubitat-rheem/blob/master/README.md",
 	"communityLink": "https://community.hubitat.com/t/release-rheem-econet-integration/37338",
 	"apps" : [

@@ -30,7 +30,7 @@ import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import java.text.SimpleDateFormat
 
-@Field static String apiUrl = "tcp://rheem.clearblade.com:1883"
+@Field static String apiUrl = "ssl://rheem.clearblade.com:1884"
 @Field static String systemKey = "e2e699cb0bb0bbb88fc8858cb5a401"
 @Field static String systemSecret = "E2E699CB0BE6C6FADDB1B0BC9A20"
 
@@ -44,7 +44,7 @@ def updated() {
 
 def mqttConnectUntilSuccessful() {
 	try {
-		interfaces.mqtt.connect(apiUrl, parent.getClientId(), parent.getAccessToken(), systemKey)
+		interfaces.mqtt.connect(apiUrl, parent.getClientId(), parent.getAccessToken(), systemKey, cleanSession: false)
 		pauseExecution(3000)
 		interfaces.mqtt.subscribe("user/${parent.getAccountId()}/device/reported", 2)
 		interfaces.mqtt.subscribe("user/${parent.getAccountId()}/device/desired", 2)

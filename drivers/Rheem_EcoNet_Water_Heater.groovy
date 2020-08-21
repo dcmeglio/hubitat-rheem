@@ -48,6 +48,10 @@ def mqttConnectUntilSuccessful() {
 		pauseExecution(3000)
 		interfaces.mqtt.subscribe("user/${parent.getAccountId()}/device/reported", 2)
 		interfaces.mqtt.subscribe("user/${parent.getAccountId()}/device/desired", 2)
+		if (state.queuedMessage != null) {
+			interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", state.queuedMessage)
+			state.queuedMessage = null
+		 }
 		return true
 	}
 	catch (e)
@@ -70,11 +74,26 @@ def initialize() {
 
 }
 
+def publishWithRetry(msg) {
+	def payload = buildMQTTMessage()
+	for (property in msg.keySet()) {
+		payload."$property" = msg[property]
+	}
+	if (interfaces.mqtt.isConnected()) {
+		interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
+	} 
+	else {
+		log.error "Not connected to MQTT, reconnecting and queuing command"
+		state.queuedMessage = JsonOutput.toJson(payload)
+		mqttConnectUntilSuccessful()
+	}
+}
+
 def mqttClientStatus(String message) {
 	if (message == "Status: Connection succeeded") {
 		parent.logDebug "Connected to MQTT"
 	}
-	else if (message.contains("Connection list") || message.contains("Client is not connected")) {
+	else if (message.contains("Connection lost") || message.contains("Client is not connected") || message.startsWith("Error:")) {
 		parent.logDebug "Lost MQTT connection, reconnecting."
 		try {
             interfaces.mqtt.disconnect() // Guarantee we're disconnected
@@ -145,30 +164,20 @@ def setThermostatFanMode(fanmode) {
 }
 	
 def setHeatingSetpoint(temperature) {
-	if (interfaces.mqtt.isConnected()) {
-		def payload = buildMQTTMessage()
-		def minTemp = new BigDecimal(device.getDataValue("minTemp"))
-		def maxTemp = new BigDecimal(device.getDataValue("maxTemp"))
-		if (temperature < minTemp)
-			temperature = minTemp
-		else if (temperature > maxTemp)
-			temperature = maxTemp
-		payload."@SETPOINT" = temperature
+	def minTemp = new BigDecimal(device.getDataValue("minTemp"))
+	def maxTemp = new BigDecimal(device.getDataValue("maxTemp"))
+	if (temperature < minTemp)
+		temperature = minTemp
+	else if (temperature > maxTemp)
+		temperature = maxTemp
 
-		log.debug JsonOutput.toJson(payload)
-		interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
-	}
+	publishWithRetry(["@SETPOINT": temperature])
+	
 }
 
 def setThermostatMode(thermostatmode) {
 	if (device.getDataValue("tempOnly") != "true") {
-		if (interfaces.mqtt.isConnected()) {
-			def payload = buildMQTTMessage()
-			log.debug thermostatmode
-			payload."@MODE" = translateThermostatModeToEnum(thermostatmode)
-			log.debug payload
-			interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
-		}
+		publishWithRetry(["@MODE": translateThermostatModeToEnum(thermostatmode)])
 	}
 	else
 		log.error "setThermostatMode called but not supported"
@@ -176,11 +185,7 @@ def setThermostatMode(thermostatmode) {
 
 def setWaterHeaterMode(waterheatermode) {
 	if (device.getDataValue("tempOnly") != "true") {
-		if (interfaces.mqtt.isConnected()) {
-			def payload = buildMQTTMessage()
-			payload."@MODE" = translateWaterHeaterModeToEnum(waterheatermode)
-			interfaces.mqtt.publish("user/${parent.getAccountId()}/device/desired", JsonOutput.toJson(payload))
-		}
+		publishWithRetry(["@MODE": translateWaterHeaterModeToEnum(thermostatmode)])
 	}
 	else
 		log.error "setThermostatMode called but not supported"

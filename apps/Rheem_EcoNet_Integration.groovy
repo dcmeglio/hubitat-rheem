@@ -124,6 +124,7 @@ def getDeviceDetails(id) {
 			// Yup the API has a typo and called it "equiptments"
 			loc.equiptments.each { equip -> 
 				if (equip.device_name + ":" + equip.serial_number == id) {
+					log.debug "Device info ${equip}"
 					if (equip."@MODE" != null) {
 						deviceDetails.modes = equip."@MODE".constraints.enumText
 						deviceDetails.currentMode = equip."@MODE".status

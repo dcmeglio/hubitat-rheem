@@ -112,6 +112,7 @@ def parse(String message) {
     def payload =  new JsonSlurper().parseText(topic.payload) 
 
 	if ("rheem:" + payload?.device_name + ":" + payload?.serial_number == device.deviceNetworkId) {
+		log.debug "MQTT Message was: ${topic.payload}"
 		if (payload."@SETPOINT" != null) {
 			device.sendEvent(name: "heatingSetpoint", value: payload."@SETPOINT", unit: "F")
 			device.sendEvent(name: "thermostatSetpoint", value: payload."@SETPOINT", unit: "F")

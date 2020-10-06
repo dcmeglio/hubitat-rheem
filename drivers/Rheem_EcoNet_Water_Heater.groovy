@@ -62,11 +62,13 @@ def mqttConnectUntilSuccessful() {
 	}
 }
 
-def initialize() {
-	if (device.getDataValue("tempOnly") != "true")
-		sendEvent(name: "supportedThermostatModes", value: ["off", "heat", "emergency heat", "auto"])
-	else
+def initialize() {	
+	if (device.getDataValue("enabledDisabled" == "true"))
+		sendEvent(name: "supportedThermostatModes", value: ["off", "heat"])
+	else if (device.getDataValue("tempOnly") == "true")
 		sendEvent(name: "supportedThermostatModes", value: [])
+	else
+		sendEvent(name: "supportedThermostatModes", value: ["off", "heat", "emergency heat", "auto"])
 	sendEvent(name: "supportedThermostatFanModes", value: [])
 	if (interfaces.mqtt.isConnected())
 		interfaces.mqtt.disconnect()
@@ -108,11 +110,10 @@ def mqttClientStatus(String message) {
 
 def parse(String message) {
 	def topic = interfaces.mqtt.parseMessage(message)
-	parent.logDebug topic.topic
     def payload =  new JsonSlurper().parseText(topic.payload) 
 
 	if ("rheem:" + payload?.device_name + ":" + payload?.serial_number == device.deviceNetworkId) {
-		log.debug "MQTT Message was: ${topic.payload}"
+		parent.logDebug "MQTT Message was: ${topic.payload}"
 		if (payload."@SETPOINT" != null) {
 			device.sendEvent(name: "heatingSetpoint", value: payload."@SETPOINT", unit: "F")
 			device.sendEvent(name: "thermostatSetpoint", value: payload."@SETPOINT", unit: "F")

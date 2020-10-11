@@ -62,11 +62,13 @@ def mqttConnectUntilSuccessful() {
 	}
 }
 
-def initialize() {
-	if (device.getDataValue("tempOnly") != "true")
-		sendEvent(name: "supportedThermostatModes", value: ["off", "heat", "emergency heat", "auto"])
-	else
+def initialize() {	
+	if (device.getDataValue("enabledDisabled" == "true"))
+		sendEvent(name: "supportedThermostatModes", value: ["off", "heat"])
+	else if (device.getDataValue("tempOnly") == "true")
 		sendEvent(name: "supportedThermostatModes", value: [])
+	else
+		sendEvent(name: "supportedThermostatModes", value: ["off", "heat", "emergency heat", "auto"])
 	sendEvent(name: "supportedThermostatFanModes", value: [])
 	if (interfaces.mqtt.isConnected())
 		interfaces.mqtt.disconnect()
@@ -108,13 +110,17 @@ def mqttClientStatus(String message) {
 
 def parse(String message) {
 	def topic = interfaces.mqtt.parseMessage(message)
-	parent.logDebug topic.topic
     def payload =  new JsonSlurper().parseText(topic.payload) 
 
 	if ("rheem:" + payload?.device_name + ":" + payload?.serial_number == device.deviceNetworkId) {
+		parent.logDebug "MQTT Message was: ${topic.payload}"
 		if (payload."@SETPOINT" != null) {
 			device.sendEvent(name: "heatingSetpoint", value: payload."@SETPOINT", unit: "F")
 			device.sendEvent(name: "thermostatSetpoint", value: payload."@SETPOINT", unit: "F")
+		}
+		if (device.getDataValue("enabledDisabled") == "true" && payload."@ACTIVE" != null) {
+			def mode = payload."@ACTIVE" == true ? "heat" : "off"
+			device.sendEvent(name: "thermostatMode", value: mode)
 		}
 		if (payload."@MODE" != null) {
 			if (!payload."@MODE".toString().isInteger()) {
@@ -127,6 +133,7 @@ def parse(String message) {
 				device.sendEvent(name: "waterHeaterMode", value: mode)
 			}
 		}
+
 		if (payload."@RUNNING" != null) {
 			device.sendEvent(name: "thermostatOperatingState", value: payload."@RUNNING" == "Running" ? "heating" : "idle")	
 		}
@@ -172,11 +179,14 @@ def setHeatingSetpoint(temperature) {
 		temperature = maxTemp
 
 	publishWithRetry(["@SETPOINT": temperature])
-	
 }
 
 def setThermostatMode(thermostatmode) {
-	if (device.getDataValue("tempOnly") != "true") {
+	if (device.getDataValue("enabledDisabled") == "true") {
+		def onOff = thermostatmode == "off" ? 0 : 1
+		publishWithRetry(["@ENABLED": onOff])
+	}
+	else if (device.getDataValue("tempOnly") != "true") {
 		publishWithRetry(["@MODE": translateThermostatModeToEnum(thermostatmode)])
 	}
 	else
@@ -184,7 +194,11 @@ def setThermostatMode(thermostatmode) {
 }
 
 def setWaterHeaterMode(waterheatermode) {
-	if (device.getDataValue("tempOnly") != "true") {
+	if (device.getDataValue("enabledDisabled") == "true") {
+		def onOff = thermostatmode == "off" ? 0 : 1
+		publishWithRetry(["@ENABLED": onOff])
+	}
+	else if (device.getDataValue("tempOnly") != "true") {
 		publishWithRetry(["@MODE": translateWaterHeaterModeToEnum(thermostatmode)])
 	}
 	else
@@ -251,7 +265,6 @@ def emergencyHeat() {
 	}
 	else
 		log.error "emergencyHeat called but not supported"
-
 }
 
 def off() {

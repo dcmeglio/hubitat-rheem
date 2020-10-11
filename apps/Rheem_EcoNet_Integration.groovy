@@ -124,13 +124,21 @@ def getDeviceDetails(id) {
 			// Yup the API has a typo and called it "equiptments"
 			loc.equiptments.each { equip -> 
 				if (equip.device_name + ":" + equip.serial_number == id) {
+					log.debug "Device info ${equip}"
 					if (equip."@MODE" != null) {
 						deviceDetails.modes = equip."@MODE".constraints.enumText
 						deviceDetails.currentMode = equip."@MODE".status
 						deviceDetails.tempOnly = false
+						deviceDetails.enabledDisabled = false
+					}
+					else if (equip."@ENABLED" != null) {
+						deviceDetails.currentMode = equip."@ENABLED".value == 1 ? "heat" : "off"
+						deviceDetails.enabledDisabled = true
+						deviceDetails.tempOnly = false
 					}
 					else {
 						deviceDetails.tempOnly = true
+						deviceDetails.enabledDisabled = false
 					}
 					deviceDetails.minTemp = equip."@SETPOINT".constraints.lowerLimit
 					deviceDetails.maxTemp = equip."@SETPOINT".constraints.upperLimit
@@ -169,10 +177,13 @@ def createChildDevices() {
 		device.updateDataValue("minTemp", deviceDetails.minTemp.toString())
 		device.updateDataValue("maxTemp", deviceDetails.maxTemp.toString())
 		device.updateDataValue("tempOnly", deviceDetails.tempOnly.toString())
+		device.updateDataValue("enabledDisabled", deviceDetails.enabledDisabled.toString())
 		device.sendEvent(name: "heatingSetpoint", value: deviceDetails.setpoint, unit: "F")
 		device.sendEvent(name: "thermostatSetpoint", value: deviceDetails.setpoint, unit: "F")
-		device.sendEvent(name: "thermostatOperatingState", value: deviceDetails.running == "Running" ? "heating" : "idle")	
-		device.sendEvent(name: "waterHeaterMode", value: deviceDetails.currentMode)
+		device.sendEvent(name: "thermostatOperatingState", value: deviceDetails.running == "Running" ? "heating" : "idle")
+		if (!deviceDetails.enabledDisabled) {	
+			device.sendEvent(name: "waterHeaterMode", value: deviceDetails.currentMode)
+		}
 		device.sendEvent(name: "thermostatMode", value: translateThermostatMode(deviceDetails.currentMode))
 	}
 }
@@ -241,7 +252,6 @@ def login() {
 		]
 		httpPost(params) { resp -> 
 			if (resp.status == 200) {
-				log.debug resp.data
 				if (resp.data.options.success) {
 					state.access_token = resp.data.user_token
 					state.account_id = resp.data.options.account_id

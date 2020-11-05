@@ -242,7 +242,7 @@ def translateThermostatModeToEnum(waterheatermode) {
 		case "auto":
 			return 1
         case "heat":
-			if (parent.hasMode(device, "HEAT PUMP") || parent.hasMode(device, "HEAT PUMP ONLY") || parent.hasMode(device, "HEAT PUMP ONLY "))
+			if (parent.hasHeatPump(device))
 				return 2
 			return 4
 		case "emergency heat":

@@ -156,7 +156,6 @@ def hasHeatPump(device) {
 	def modes = state.deviceModes[id]
 
 	for (deviceMode in modes) {
-		log.debug "Comparing 'HEAT PUMP' and '${deviceMode.toUpperCase()}'"
 		if (deviceMode.toUpperCase().startsWith("HEAT PUMP"))
 			return true
 	}

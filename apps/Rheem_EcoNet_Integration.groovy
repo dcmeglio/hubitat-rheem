@@ -151,6 +151,17 @@ def getDeviceDetails(id) {
 	return deviceDetails
 }
 
+def hasHeatPump(device) {
+	def id = device.deviceNetworkId.replace("rheem:","")
+	def modes = state.deviceModes[id]
+
+	for (deviceMode in modes) {
+		if (deviceMode.toUpperCase().startsWith("HEAT PUMP"))
+			return true
+	}
+	return false
+}
+
 def hasMode(device, mode) {
 	def id = device.deviceNetworkId.replace("rheem:","")
 	def modes = state.deviceModes[id]
@@ -212,6 +223,7 @@ def cleanupChildDevices()
 }
 
 def translateThermostatMode(mode) {
+	mode = mode.toUpperCase()
 	switch (mode) {
 		case "ENERGY SAVING":
 			return "auto"

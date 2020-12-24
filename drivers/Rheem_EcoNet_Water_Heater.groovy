@@ -63,7 +63,7 @@ def mqttConnectUntilSuccessful() {
 }
 
 def initialize() {	
-	if (device.getDataValue("enabledDisabled" == "true"))
+	if (device.getDataValue("enabledDisabled") == "true")
 		sendEvent(name: "supportedThermostatModes", value: ["off", "heat"])
 	else if (device.getDataValue("tempOnly") == "true")
 		sendEvent(name: "supportedThermostatModes", value: [])

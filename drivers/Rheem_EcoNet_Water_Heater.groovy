@@ -19,7 +19,7 @@ metadata {
 		capability "ThermostatOperatingState"
 		capability "ThermostatMode"
 		
-		command "setWaterHeaterMode", [[name:"Mode*","type":"ENUM","description":"Mode","constraints":["Heat Pump", "Energy Saver", "High Demand", "Normal", "Off"]]]
+		command "setWaterHeaterMode", [[name:"Mode*","type":"ENUM","description":"Mode","constraints":["Heat Pump", "Energy Saver", "High Demand", "Normal", "Vacation", "Off"]]]
 		
 		attribute "waterHeaterMode", "ENUM"
     }
@@ -217,6 +217,8 @@ def translateWaterHeaterModeToEnum(waterheatermode) {
             return 3
 		case "Normal":
             return 4
+		case "Vacation":
+			return 5
 	}
 }
 
@@ -232,6 +234,8 @@ def translateEnumToWaterHeaderMode(enumVal) {
 			return "HIGH DEMAND"
 		case 4:
 			return "ELECTRIC"
+		case 5:
+			return "VACATION"
 	}
 }
 
@@ -247,7 +251,6 @@ def translateThermostatModeToEnum(waterheatermode) {
 			return 4
 		case "emergency heat":
             return 3
-
 	}
 }
 

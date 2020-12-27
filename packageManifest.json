@@ -2,9 +2,9 @@
 	"packageName": "Rheem EcoNet Integration",
 	"minimumHEVersion": "2.2.2",
 	"author": "Dominick Meglio",
-	"version": "2.2.1",
-	"dateReleased": "2020-11-05",
-	"releaseNotes": "Resolved an issue with some newer model heat pump water heaters where the mode names were not matching properly.",
+	"version": "2.3.0",
+	"dateReleased": "2020-12-27",
+	"releaseNotes": "Added support for vacation mode for those water heaters that support it.",
 	"documentationLink": "https://github.com/dcmeglio/hubitat-rheem/blob/master/README.md",
 	"communityLink": "https://community.hubitat.com/t/release-rheem-econet-integration/37338",
 	"apps" : [

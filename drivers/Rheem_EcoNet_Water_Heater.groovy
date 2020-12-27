@@ -199,10 +199,10 @@ def setWaterHeaterMode(waterheatermode) {
 		publishWithRetry(["@ENABLED": onOff])
 	}
 	else if (device.getDataValue("tempOnly") != "true") {
-		publishWithRetry(["@MODE": translateWaterHeaterModeToEnum(thermostatmode)])
+		publishWithRetry(["@MODE": translateWaterHeaterModeToEnum(waterheatermode)])
 	}
 	else
-		log.error "setThermostatMode called but not supported"
+		log.error "setWaterHeaterMode called but not supported"
 }
 
 def translateWaterHeaterModeToEnum(waterheatermode) {

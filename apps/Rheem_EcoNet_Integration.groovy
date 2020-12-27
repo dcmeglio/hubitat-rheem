@@ -236,6 +236,7 @@ def translateThermostatMode(mode) {
 		case "ELECTRIC":
 		case "ELECTRIC MODE":
 		case "GAS":
+		case "VACATION":
             return "heat"
 		case "OFF":
 			return "off"

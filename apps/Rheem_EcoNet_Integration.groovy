@@ -223,7 +223,7 @@ def cleanupChildDevices()
 }
 
 def translateThermostatMode(mode) {
-	mode = mode.toUpperCase()
+	mode = mode?.toUpperCase()
 	switch (mode) {
 		case "ENERGY SAVING":
 			return "auto"
